@@ -1,57 +1,57 @@
 const { AuthenticationError } = require("apollo-server-express");
 const { User } = require("../models");
-const { signToken } = require("..utils/auth");
+const { signToken } = require("../utils/auth.js");
 
 const resolvers = {
   Query: {
     me: async (parent, args, context) => {
       if (context.user) {
-        const userDate = await User.findOne({
-          _id: context.user.user.id,
-        }).populate("savedBooks");
-        return await User.findOne({ _id: context.user.user.id }).populate(
-          "savedBooks"
-        );
+        const userData = await User.findOne({
+          _id: context.user.user._id,
+        }).select("-__v -password");
+        return userData;
       }
       throw new AuthenticationError("You should be logged in!");
     },
   },
 
   Mutation: {
-    addUser: async (parent, { username, email, password }) => {
-      const user = await User.create({ username, email, password });
-      const token = signToken(profile);
+    addUser: async (parent, args) => {
+      const user = await User.create(args);
+      const token = signToken(user);
 
       return { token, user };
     },
     login: async (parent, { email, password }) => {
-      const profile = await User.findOne({ email });
+      const user = await User.findOne({ email });
 
       if (!user) {
         throw new AuthenticationError("No user with this email.");
       }
-      const correctPw = await profile.isCorrectPassword(password);
+      const correctPw = await user.isCorrectPassword(password);
 
       if (!correctPw) {
         throw new AuthenticationError("Incorrect password");
       }
 
-      const token = signToken(profile);
+      const token = signToken(user);
       return { token, user };
     },
 
-    saveBook: async (parent, { book }, context) => {
+    saveBook: async (parent, { newBook }, context) => {
       if (context.user) {
         return User.findOneAndUpdate(
           { _id: context.user._id },
           {
-            $addToSet: { savedBooks: book },
+            $addToSet: { savedBooks: newBook },
           },
           {
             new: true,
             runValidators: true,
           }
         );
+
+        return updatedUser;
       }
       throw new AuthenticationError("You need to be logged in");
     },
@@ -62,6 +62,7 @@ const resolvers = {
           { $pull: { savedBooks: books } },
           { new: true }
         );
+        return updatedUser;
       }
       throw new AuthenticationError("You need to be logged in");
     },
