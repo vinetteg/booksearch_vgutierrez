@@ -22,7 +22,7 @@ const typedefs = gql`
     me: User
   }
 
-  type Autho {
+  type Auth {
     token: ID!
     user: User
   }
